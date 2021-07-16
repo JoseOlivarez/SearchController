@@ -50,7 +50,7 @@ namespace Cascade0.Controllers
         }
         private IQueryable<Employee> GenerateClause(string propName, string selectedOperator, GenericObject Emp)
         {
-            var propertyInfo = typeof(Employee).GetProperty(propName);
+            var propertyInfo = typeof(T).GetProperty(propName);
             object fieldValue;
             fieldValue = Emp.parameterValue;
             var db = _context.Employee.Where(PropertyEquals1<Employee, string>(propertyInfo, selectedOperator, propName, fieldValue, Emp));
@@ -58,8 +58,8 @@ namespace Cascade0.Controllers
         }
         private IQueryable<Employee> GenerateClause2(string propName, string propName2, string selectedOperator, string selectedOperator2, GenericObject Emp)
         {
-            var propertyInfo = typeof(Employee).GetProperty(propName);
-            var propertyInfo2 = typeof(Employee).GetProperty(propName2);
+            var propertyInfo = typeof(T).GetProperty(propName);
+            var propertyInfo2 = typeof(T).GetProperty(propName2);
 
             object fieldValue; object fieldValue2;
             fieldValue2 = Emp.parameterValue2;
@@ -69,9 +69,9 @@ namespace Cascade0.Controllers
         }
         private IQueryable<Employee> GenerateClause3(string propName, string propName2, string propName3, string selectedOperator, string selectedOperator2, string selectedOperator3, GenericObject Emp)
         {
-            var propertyInfo = typeof(Employee).GetProperty(propName);
-            var propertyInfo2 = typeof(Employee).GetProperty(propName2);
-            var propertyInfo3 = typeof(Employee).GetProperty(propName3);
+            var propertyInfo = typeof(T).GetProperty(propName);
+            var propertyInfo2 = typeof(T).GetProperty(propName2);
+            var propertyInfo3 = typeof(T).GetProperty(propName3);
 
             var db = _context.Employee.Where(PropertyEquals3<Employee, string>(propertyInfo, propertyInfo2, propertyInfo3, selectedOperator, selectedOperator2, selectedOperator3, Emp, propName, propName2, propName3)); ;
 
@@ -83,10 +83,10 @@ namespace Cascade0.Controllers
         }
         private IQueryable<Employee> GenerateClause4(string propName, string propName2, string propName3, string propName4, string selectedOperator, string selectedOperator2, string selectedOperator3, string selectedOperator4, GenericObject Emp)
         {
-            var propertyInfo = typeof(Employee).GetProperty(propName);
-            var propertyInfo2 = typeof(Employee).GetProperty(propName2);
-            var propertyInfo4 = typeof(Employee).GetProperty(propName4);
-            var propertyInfo3 = typeof(Employee).GetProperty(propName3);
+            var propertyInfo = typeof(T).GetProperty(propName);
+            var propertyInfo2 = typeof(T).GetProperty(propName2);
+            var propertyInfo4 = typeof(T).GetProperty(propName4);
+            var propertyInfo3 = typeof(T).GetProperty(propName3);
 
             var db = _context.Employee.Where(PropertyEquals4<Employee, string>(propertyInfo, propertyInfo2, propertyInfo3, propertyInfo4, Emp, selectedOperator, selectedOperator2, selectedOperator3, selectedOperator4, propName, propName2, propName3, propName4));
 
