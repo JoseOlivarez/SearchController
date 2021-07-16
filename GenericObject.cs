@@ -24,7 +24,7 @@ namespace Cascade0.Controllers
         public DateTime? parameterValueDateTime2 { get;  set; }
         public int? parameterValueInt3 { get;  set; }
         public DateTime? parameterValueDateTime3 { get;  set; }
-        public bool Or3 { get; internal set; }
+        public bool Or3 { get;  set; }
         public int? parameterValueInt2 { get;  set; }
         public bool Or2 { get;  set; }
         public bool Or { get;  set; }

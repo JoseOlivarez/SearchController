@@ -21,6 +21,8 @@ using System.ComponentModel.DataAnnotations;
 using AutoMapper.Internal;
 using Castle.Core.Internal;
 using Cascade0.Helpers;
+using Cascade0.Managers;
+using Newtonsoft.Json;
 
 namespace Cascade0.Controllers
 {
@@ -32,18 +34,23 @@ namespace Cascade0.Controllers
         private static MethodCallExpression bodyLike;
         private static MethodCallExpression bodyLikeStart;
         private static BinaryExpression body;
+
+
+        private readonly IUserHelper _userHelper;
+        private UserInfo userInfo; 
+
         private readonly IOnPageLoadHelper _onPageLoadHelper;
 
-        public GenericEmployeeSearch(IOnPageLoadHelper onPageLoadHelper)
+        public GenericEmployeeSearch(IOnPageLoadHelper onPageLoadHelper, IUserHelper userHelper)
         {
             DDSPRODDBContext context = new DDSPRODDBContext();
             _onPageLoadHelper = onPageLoadHelper;
-
+            _userHelper = userHelper;
             _context = context;
         }
         private IQueryable<Employee> GenerateClause(string propName, string selectedOperator, GenericObject Emp)
         {
-            var propertyInfo = typeof(T).GetProperty(propName);
+            var propertyInfo = typeof(Employee).GetProperty(propName);
             object fieldValue;
             fieldValue = Emp.parameterValue;
             var db = _context.Employee.Where(PropertyEquals1<Employee, string>(propertyInfo, selectedOperator, propName, fieldValue, Emp));
@@ -51,8 +58,8 @@ namespace Cascade0.Controllers
         }
         private IQueryable<Employee> GenerateClause2(string propName, string propName2, string selectedOperator, string selectedOperator2, GenericObject Emp)
         {
-            var propertyInfo = typeof(T).GetProperty(propName);
-            var propertyInfo2 = typeof(T).GetProperty(propName2);
+            var propertyInfo = typeof(Employee).GetProperty(propName);
+            var propertyInfo2 = typeof(Employee).GetProperty(propName2);
 
             object fieldValue; object fieldValue2;
             fieldValue2 = Emp.parameterValue2;
@@ -62,9 +69,9 @@ namespace Cascade0.Controllers
         }
         private IQueryable<Employee> GenerateClause3(string propName, string propName2, string propName3, string selectedOperator, string selectedOperator2, string selectedOperator3, GenericObject Emp)
         {
-            var propertyInfo = typeof(T).GetProperty(propName);
-            var propertyInfo2 = typeof(T).GetProperty(propName2);
-            var propertyInfo3 = typeof(T).GetProperty(propName3);
+            var propertyInfo = typeof(Employee).GetProperty(propName);
+            var propertyInfo2 = typeof(Employee).GetProperty(propName2);
+            var propertyInfo3 = typeof(Employee).GetProperty(propName3);
 
             var db = _context.Employee.Where(PropertyEquals3<Employee, string>(propertyInfo, propertyInfo2, propertyInfo3, selectedOperator, selectedOperator2, selectedOperator3, Emp, propName, propName2, propName3)); ;
 
@@ -76,10 +83,10 @@ namespace Cascade0.Controllers
         }
         private IQueryable<Employee> GenerateClause4(string propName, string propName2, string propName3, string propName4, string selectedOperator, string selectedOperator2, string selectedOperator3, string selectedOperator4, GenericObject Emp)
         {
-            var propertyInfo = typeof(T).GetProperty(propName);
-            var propertyInfo2 = typeof(T).GetProperty(propName2);
-            var propertyInfo4 = typeof(T).GetProperty(propName4);
-            var propertyInfo3 = typeof(T).GetProperty(propName3);
+            var propertyInfo = typeof(Employee).GetProperty(propName);
+            var propertyInfo2 = typeof(Employee).GetProperty(propName2);
+            var propertyInfo4 = typeof(Employee).GetProperty(propName4);
+            var propertyInfo3 = typeof(Employee).GetProperty(propName3);
 
             var db = _context.Employee.Where(PropertyEquals4<Employee, string>(propertyInfo, propertyInfo2, propertyInfo3, propertyInfo4, Emp, selectedOperator, selectedOperator2, selectedOperator3, selectedOperator4, propName, propName2, propName3, propName4));
 
@@ -96,6 +103,82 @@ namespace Cascade0.Controllers
         }
 
         public static MethodInfo StartsWith { get; private set; }
+
+        [Route("LoadTemplate")]
+        [HttpGet]
+        public async Task<ActionResult> LoadTemplate()
+        {
+            UserInfo userInfo = new UserInfo(); 
+            try
+            {
+                userInfo = _userHelper.GetUser(User);
+
+            }
+            catch(Exception Ex)
+            {
+                Conflict("Issue gathering userid");
+            }
+
+
+
+
+            var loadTemplateForUser = (
+            from searchtemplate in _context.SearchTemplate
+            where searchtemplate.UserId ==userInfo.UserId
+            select searchtemplate).ToString();
+
+            // now we got the search template which will have
+
+            var result = JsonConvert.DeserializeObject<GenericObject>(loadTemplateForUser);
+
+
+
+
+
+            return Ok(loadTemplateForUser);
+
+        }
+        [Route("SaveTemplate")]
+        [HttpPost]
+        public async Task<ActionResult> SaveTemplate()
+        {
+            UserInfo userInfo = new UserInfo();
+            try
+            {
+                userInfo = _userHelper.GetUser(User);
+
+            }
+            catch (Exception Ex)
+            {
+                Conflict("Issue gathering userid");
+            }
+
+
+            SearchTemplate newSearchTemplate = new SearchTemplate();
+            newSearchTemplate.UserId = userInfo.UserId;
+            string sampleData = @"{
+                                    ""propName"": Lastname,
+                                    ""selectedOperator"": Equals,
+                                    ""paramaterValue"": Jones
+                                }";
+            newSearchTemplate.Query = sampleData;
+            _context.SearchTemplate.Add(newSearchTemplate);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                Conflict("Issue saving new template");
+            }
+            return Ok(); 
+        }
+
+
+
+
+
+
 
         [HttpPost]
         // GET: api/GenericEmployeeSearch
@@ -144,10 +227,10 @@ namespace Cascade0.Controllers
         public static Expression<Func<TItem, bool>> PropertyEquals1<TItem, TValue>(PropertyInfo propName, string selectedOperator, string propNameString, object fieldValue, GenericObject T)
         {
             bool where;
-            Type myType = typeof(T);
+            Type myType = typeof(Employee);
             var PropertyInfo = myType.GetProperty(propNameString);
 
-            var parameter = Expression.Parameter(typeof(T));
+            var parameter = Expression.Parameter(typeof(Employee));
             var idproperty = myType.GetProperty(propNameString);
             MethodInfo contains = typeof(string).GetMethod("Contains", new[] { typeof(string) });
             MethodInfo startsWith = typeof(string).GetMethod("StartsWith", new Type[] { typeof(string) });
@@ -741,10 +824,10 @@ namespace Cascade0.Controllers
         public static Expression<Func<TItem, bool>> PropertyEquals2<TItem, TValue>(PropertyInfo propName, PropertyInfo propName2, string selectedOperator, string selectedOperator2, object value, object value2, GenericObject T, string propNameString, string propNameString2)
         {
 
-            Type myType = typeof(T);
+            Type myType = typeof(Employee);
             var PropertyInfo = myType.GetProperty(propNameString);
 
-            var parameter = Expression.Parameter(typeof(T));
+            var parameter = Expression.Parameter(typeof(Employee));
             MethodInfo contains = typeof(string).GetMethod("Contains", new[] { typeof(string) });
             MethodInfo StartsWith = typeof(string).GetMethod("StartsWith", new Type[] { typeof(string) });
 
@@ -2637,10 +2720,10 @@ namespace Cascade0.Controllers
         }
         public static Expression<Func<TItem, bool>> PropertyEquals3<TItem, TValue>(PropertyInfo propName, PropertyInfo propName2, PropertyInfo propName3, string selectedOperator, string selectedOperator2, string selectedOperator3, GenericObject T, string propNameString, string propNameString2, string propNameString3)
         {
-            Type myType = typeof(T);
+            Type myType = typeof(Employee);
             var PropertyInfo = myType.GetProperty(propNameString);
 
-            var parameter = Expression.Parameter(typeof(T));
+            var parameter = Expression.Parameter(typeof(Employee));
             MethodInfo contains = typeof(string).GetMethod("Contains", new[] { typeof(string) });
             MethodInfo StartsWith = typeof(string).GetMethod("StartsWith", new Type[] { typeof(string) });
 
@@ -8313,7 +8396,7 @@ namespace Cascade0.Controllers
                                     break;
                                 }
                                 body = Expression.And(GenericEmployeeSearch.body, Expression.NotEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValue3)));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
+                                break;
 
                                 break;
                             case "LessThan":
@@ -9083,10 +9166,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueInt3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueInt3, typeof(int))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "NotEqual":
                                 xs = myType.GetProperty(propNameString3);
@@ -9101,10 +9183,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueInt3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.NotEqual(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.NotEqual(Expression.Property(parameter, propName3), Expression.Convert(Expression.Constant(T.parameterValueInt3), typeof(int))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "LessThan":
                                 xs = myType.GetProperty(propNameString3);
@@ -9119,10 +9200,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueInt3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.LessThan(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.LessThan(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueInt3, typeof(int))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "LessThanOrEqual":
                                 xs = myType.GetProperty(propNameString3);
@@ -9137,10 +9217,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueInt3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.LessThanOrEqual(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.LessThanOrEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueInt3, typeof(int))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "GreaterThan":
                                 xs = myType.GetProperty(propNameString3);
@@ -9155,10 +9234,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueInt3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.GreaterThan(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.GreaterThan(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueInt3, typeof(int))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "GreaterThanOrEquals":
                                 xs = myType.GetProperty(propNameString3);
@@ -9173,10 +9251,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueInt3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueInt3, typeof(int))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "Like":
                                 xs = myType.GetProperty(propNameString3);
@@ -9196,13 +9273,13 @@ namespace Cascade0.Controllers
                                     if (body != null)
                                     {
                                         body = Expression.Or(GenericEmployeeSearch.bodyLike, body);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                     else
                                     {
                                         body =
                                      Expression.Or(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                 }
                                 bodyLike = Expression.Call(Expression.Property(parameter, propName2), contains, Expression.Constant(T.parameterValueInt3, typeof(int)));
@@ -9210,14 +9287,12 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.Or(bodyLike, GenericEmployeeSearch.body);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
                                 else
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.Or(bodyLike, bodyLike);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
 
@@ -9238,13 +9313,13 @@ namespace Cascade0.Controllers
                                     if (body != null)
                                     {
                                         body = Expression.Or(GenericEmployeeSearch.bodyLike, body);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                     else
                                     {
                                         body =
                                      Expression.Or(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                 }
                                 bodyLike = Expression.Call(Expression.Property(parameter, propName2), StartsWith, Expression.Constant(T.parameterValueInt3, typeof(int?)));
@@ -9252,14 +9327,12 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.Or(bodyLike, GenericEmployeeSearch.body);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
                                 else
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.Or(bodyLike, bodyLike);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
 
@@ -9286,10 +9359,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValue3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValue3)));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "NotEqual":
                                 xs = myType.GetProperty(propNameString3);
@@ -9304,10 +9376,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValue3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.NotEqual(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.NotEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValue3)));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "LessThan":
                                 xs = myType.GetProperty(propNameString3);
@@ -9322,10 +9393,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValue3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.LessThan(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.LessThan(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValue3)));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "LessThanOrEqual":
                                 xs = myType.GetProperty(propNameString3);
@@ -9340,10 +9410,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValue3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.LessThanOrEqual(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.LessThanOrEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValue3)));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "GreaterThan":
                                 xs = myType.GetProperty(propNameString3);
@@ -9358,10 +9427,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValue3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.GreaterThan(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.GreaterThan(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValue3)));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "GreaterThanOrEquals":
                                 xs = myType.GetProperty(propNameString3);
@@ -9376,10 +9444,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValue3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValue3)));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "Like":
                                 xs = myType.GetProperty(propNameString3);
@@ -9399,13 +9466,13 @@ namespace Cascade0.Controllers
                                     if (body != null)
                                     {
                                         body = Expression.Or(GenericEmployeeSearch.bodyLike, body);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                     else
                                     {
                                         body =
                                      Expression.Or(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                 }
                                 bodyLike = Expression.Call(Expression.Property(parameter, propName2), contains, Expression.Constant(T.parameterValue3));
@@ -9413,14 +9480,12 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.Or(bodyLike, GenericEmployeeSearch.body);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
                                 else
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.Or(bodyLike, bodyLike);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
 
@@ -9430,14 +9495,12 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.Or(bodyLike, GenericEmployeeSearch.body);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
                                 else
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.Or(bodyLike, bodyLike);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
 
@@ -9465,10 +9528,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueDateTime3, typeof(DateTime?))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "NotEqual":
                                 xs = myType.GetProperty(propNameString3);
@@ -9483,10 +9545,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.NotEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueDateTime3, typeof(DateTime?))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "LessThan":
                                 xs = myType.GetProperty(propNameString3);
@@ -9501,10 +9562,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.LessThan(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueDateTime3, typeof(DateTime?))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "LessThanOrEqual":
                                 xs = myType.GetProperty(propNameString3);
@@ -9519,10 +9579,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.LessThanOrEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueDateTime3, typeof(DateTime?))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "GreaterThan":
                                 xs = myType.GetProperty(propNameString3);
@@ -9537,10 +9596,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.GreaterThan(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueDateTime3, typeof(DateTime?))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "GreaterThanOrEquals":
                                 xs = myType.GetProperty(propNameString3);
@@ -9555,10 +9613,9 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime3, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.Or(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
-                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                    break;
                                 }
                                 body = Expression.Or(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propName3), Expression.Constant(T.parameterValueDateTime3, typeof(DateTime?))));
-                                return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                 break;
                             case "Like":
                                 xs = myType.GetProperty(propNameString3);
@@ -9578,13 +9635,13 @@ namespace Cascade0.Controllers
                                     if (body != null)
                                     {
                                         body = Expression.Or(GenericEmployeeSearch.bodyLike, body);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                     else
                                     {
                                         body =
                                      Expression.Or(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                 }
                                 bodyLike = Expression.Call(Expression.Property(parameter, propName3), contains, Expression.Constant(T.parameterValueDateTime3, typeof(DateTime?)));
@@ -9592,14 +9649,12 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.Or(bodyLike, GenericEmployeeSearch.body);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
                                 else
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.Or(bodyLike, bodyLike);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
 
@@ -9622,13 +9677,13 @@ namespace Cascade0.Controllers
                                     if (body != null)
                                     {
                                         body = Expression.Or(GenericEmployeeSearch.bodyLike, body);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                     else
                                     {
                                         body =
                                      Expression.Or(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
-                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                 }
                                 bodyLike = Expression.Call(Expression.Property(parameter, propName2), StartsWith, Expression.Constant(T.parameterValueDateTime3, typeof(DateTime?)));
@@ -9636,14 +9691,12 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.Or(bodyLike, GenericEmployeeSearch.body);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
                                 else
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.Or(bodyLike, bodyLike);
-                                    return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
                                     break;
                                 }
                                 break;
@@ -9677,9 +9730,11 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValue4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.And(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
                                     break;
                                 }
                                 body = Expression.And(GenericEmployeeSearch.body, Expression.Equal(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4)));
+                                return Expression.Lambda<Func<TItem, bool>>(body, parameter);
                                 break;
                             case "NotEqual":
                                 xs = myType.GetProperty(propNameString4);
@@ -9693,7 +9748,8 @@ namespace Cascade0.Controllers
                                     //however we can change what the constant is
                                     var right = Expression.Constant(T.parameterValue4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
-                                    body = Expression.And(body, Expression.NotEqual(Expression.Property(parameter, propertyInfo), right));
+                                    body = Expression.And(body, Expression.NotEqual(Expression.Property(parameter, propertyInfo), right)); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
                                 body = Expression.And(GenericEmployeeSearch.body, Expression.NotEqual(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4)));
@@ -9713,10 +9769,12 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValue4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.And(body, Expression.LessThan(Expression.Property(parameter, propertyInfo), right));
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
                                     break;
                                 }
                                 body = Expression.And(GenericEmployeeSearch.body, Expression.LessThan(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4)));
-                                break;
+                                return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                 break;
                                 break;
                             case "LessThanOrEqual":
                                 xs = myType.GetProperty(propNameString4);
@@ -9730,10 +9788,12 @@ namespace Cascade0.Controllers
                                     //however we can change what the constant is
                                     var right = Expression.Constant(T.parameterValue4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
-                                    body = Expression.And(body, Expression.LessThanOrEqual(Expression.Property(parameter, propertyInfo), right));
+                                    body = Expression.And(body, Expression.LessThanOrEqual(Expression.Property(parameter, propertyInfo), right)); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
-                                body = Expression.And(GenericEmployeeSearch.body, Expression.LessThanOrEqual(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4)));
+                                body = Expression.And(GenericEmployeeSearch.body, Expression.LessThanOrEqual(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4))); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                 break;
                             case "GreaterThan":
                                 xs = myType.GetProperty(propNameString4);
@@ -9747,10 +9807,13 @@ namespace Cascade0.Controllers
                                     //however we can change what the constant is
                                     var right = Expression.Constant(T.parameterValue4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
-                                    body = Expression.And(body, Expression.GreaterThan(Expression.Property(parameter, propertyInfo), right));
+                                    body = Expression.And(body, Expression.GreaterThan(Expression.Property(parameter, propertyInfo), right)); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
-                                body = Expression.And(GenericEmployeeSearch.body, Expression.GreaterThan(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4)));
+                                body = Expression.And(GenericEmployeeSearch.body, Expression.GreaterThan(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4))); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                 break;
                             case "GreaterThanOrEquals":
                                 xs = myType.GetProperty(propNameString4);
@@ -9764,10 +9827,12 @@ namespace Cascade0.Controllers
                                     //however we can change what the constant is
                                     var right = Expression.Constant(T.parameterValue4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
-                                    body = Expression.And(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propertyInfo), right));
+                                    body = Expression.And(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propertyInfo), right)); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
-                                body = Expression.And(GenericEmployeeSearch.body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4)));
+                                body = Expression.And(GenericEmployeeSearch.body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValue4))); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                 break;
                             case "Like":
                                 xs = myType.GetProperty(propNameString4);
@@ -9786,13 +9851,15 @@ namespace Cascade0.Controllers
 
                                     if (body != null)
                                     {
-                                        body = Expression.And(GenericEmployeeSearch.bodyLike, body);
+                                        body = Expression.And(GenericEmployeeSearch.bodyLike, body); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                         break;
                                     }
                                     else
                                     {
                                         body =
-                                     Expression.And(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
+                                     Expression.And(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                         break;
                                     }
                                 }
@@ -9801,6 +9868,7 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.And(bodyLike, GenericEmployeeSearch.body); return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
 
                                     break;
                                 }
@@ -9808,6 +9876,7 @@ namespace Cascade0.Controllers
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.And(bodyLike, bodyLike); return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
 
                                     break;
                                 }
@@ -9828,14 +9897,16 @@ namespace Cascade0.Controllers
 
                                     if (body != null)
                                     {
-                                        body = Expression.And(GenericEmployeeSearch.bodyLike, body);
+                                        body = Expression.And(GenericEmployeeSearch.bodyLike, body); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                         break;
 
                                     }
                                     else
                                     {
                                         body =
-                                     Expression.And(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
+                                     Expression.And(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike); return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                         break;
                                     }
                                 }
@@ -9844,6 +9915,7 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.And(bodyLike, GenericEmployeeSearch.body); return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
 
                                     break;
                                 }
@@ -9851,6 +9923,7 @@ namespace Cascade0.Controllers
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.And(bodyLike, bodyLike); return Expression.Lambda<Func<TItem, bool>>(GenericEmployeeSearch.body, parameter);
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
 
                                     break;
 
@@ -9880,6 +9953,8 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.And(body, Expression.Equal(Expression.Property(parameter, propertyInfo), right));
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
                                 body = Expression.And(body, Expression.Equal(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValueDateTime4, typeof(DateTime?))));
@@ -9897,9 +9972,13 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.And(body, Expression.NotEqual(Expression.Property(parameter, propertyInfo), right));
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
                                 body = Expression.And(body, Expression.NotEqual(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValueDateTime4, typeof(DateTime?))));
+                                return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                 break;
                             case "LessThan":
                                 xs = myType.GetProperty(propNameString4);
@@ -9917,6 +9996,8 @@ namespace Cascade0.Controllers
                                     break;
                                 }
                                 body = Expression.And(body, Expression.LessThan(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValueDateTime4, typeof(DateTime?))));
+                                return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                 break;
                                 break;
                             case "LessThanOrEqual":
@@ -9932,9 +10013,13 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.And(body, Expression.LessThanOrEqual(Expression.Property(parameter, propertyInfo), right));
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
                                 body = Expression.And(body, Expression.LessThanOrEqual(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValueDateTime4, typeof(DateTime?))));
+                                return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                 break;
                             case "GreaterThan":
                                 xs = myType.GetProperty(propNameString4);
@@ -9949,9 +10034,13 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.And(body, Expression.GreaterThan(Expression.Property(parameter, propertyInfo), right));
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
                                 body = Expression.And(body, Expression.GreaterThan(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValueDateTime4, typeof(DateTime?))));
+                                return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                 break;
                                 break;
                             case "GreaterThanOrEquals":
@@ -9967,6 +10056,8 @@ namespace Cascade0.Controllers
                                     var right = Expression.Constant(T.parameterValueDateTime4, xs.PropertyType);
                                     // we cant change the value of the propertyInfo that keeps our variables in reflection with entity 
                                     body = Expression.And(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propertyInfo), right));
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
                                 body = Expression.And(body, Expression.GreaterThanOrEqual(Expression.Property(parameter, propName4), Expression.Constant(T.parameterValueDateTime4, typeof(DateTime?))));
@@ -9988,12 +10079,16 @@ namespace Cascade0.Controllers
                                     if (body != null)
                                     {
                                         body = Expression.And(GenericEmployeeSearch.bodyLike, body);
+                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                         break;
                                     }
                                     else
                                     {
                                         body =
                                      Expression.And(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
+                                        return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                         break;
                                     }
                                 }
@@ -10002,12 +10097,16 @@ namespace Cascade0.Controllers
                                 if (GenericEmployeeSearch.body != null)
                                 {
                                     GenericEmployeeSearch.body = Expression.And(bodyLike, GenericEmployeeSearch.body);
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
                                 else
                                 {
                                     GenericEmployeeSearch.body =
                                  Expression.And(bodyLike, bodyLike);
+                                    return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+
                                     break;
                                 }
                             case "StartsWith":
@@ -10029,12 +10128,14 @@ namespace Cascade0.Controllers
                                     {
                                         body = Expression.And(GenericEmployeeSearch.bodyLike, body);
                                         return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                     else
                                     {
                                         body =
                                      Expression.And(GenericEmployeeSearch.bodyLike, GenericEmployeeSearch.bodyLike);
                                         return Expression.Lambda<Func<TItem, bool>>(body, parameter);
+                                        break;
                                     }
                                 }
                                 bodyLike = Expression.Call(Expression.Property(parameter, propName4), StartsWith, Expression.Constant(T.parameterValueDateTime4));
