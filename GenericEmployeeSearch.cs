@@ -23,6 +23,11 @@ using Castle.Core.Internal;
 using Cascade0.Helpers;
 using Cascade0.Managers;
 using Newtonsoft.Json;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
+using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
+using System.IO;
 
 namespace Cascade0.Controllers
 {
@@ -104,10 +109,18 @@ namespace Cascade0.Controllers
 
         public static MethodInfo StartsWith { get; private set; }
 
+
+   
+
         [Route("LoadTemplate")]
         [HttpGet]
         public async Task<ActionResult> LoadTemplate()
         {
+
+
+
+            /**
+             * we need to check if the template exists**/
             UserInfo userInfo = new UserInfo(); 
             try
             {
@@ -119,29 +132,56 @@ namespace Cascade0.Controllers
                 Conflict("Issue gathering userid");
             }
 
-
-
-
             var loadTemplateForUser = (
             from searchtemplate in _context.SearchTemplate
             where searchtemplate.UserId ==userInfo.UserId
-            select searchtemplate).ToString();
+            select searchtemplate.Query).First();
 
+
+            JObject jobject = JObject.Parse(loadTemplateForUser);
+            // pick out one album
+
+            // Copy to a static Template instance
+            GenericObject template = jobject.ToObject<GenericObject>();
             // now we got the search template which will have
+            try
+            {
+            //    var json = JsonConvert.DeserializeObject(loadTemplateForUser);
+             if(template.paramaterValue1 != null && template.paramaterValue2 == null && template.paramaterValue3 == null)
+                {
+                     var querySetOne = await GetT(template.propName, template, template.selectedOperator);
+                    return Ok(querySetOne); 
+                }
+                if (template.paramaterValue1 != null && template.paramaterValue2 != null && template.paramaterValue3 == null)
+                {
+                    var querySetTwo = await GetQuerySetTwo(template.propName, template.propName2, template, template.selectedOperator, template.selectedOperator2);
+                    return Ok(querySetTwo);
+                }
+                if (template.paramaterValue1 != null && template.paramaterValue2 != null && template.paramaterValue3 != null && template.paramaterValue4== null)
+                {
+                    var querySetThree = await GetQuerySetThree(template.propName, template.propName2, template.propName3, template, template.selectedOperator, template.selectedOperator2, template.selectedOperator3);
+                    return Ok(querySetThree);
+                }
+                if (template.paramaterValue1 != null && template.paramaterValue2 != null && template.paramaterValue3 != null && template.paramaterValue4 == null)
+                {
+                    var querySetFour = await GetQuerySetFour(template.propName, template.propName2, template.propName3, template.propName4, template, template.selectedOperator, template.selectedOperator2, template.selectedOperator3, template.selectedOperator4);
+                    return Ok(querySetFour);
+                }
 
-            var result = JsonConvert.DeserializeObject<GenericObject>(loadTemplateForUser);
-
-
-
-
-
+            }
+            catch(Exception ex)
+            {
+                Conflict("The exception is" + ex);
+            }
             return Ok(loadTemplateForUser);
 
         }
-        [Route("SaveTemplate")]
+
+            [Route("SaveTemplate")]
         [HttpPost]
-        public async Task<ActionResult> SaveTemplate()
-        {
+        public async Task<ActionResult> SaveTemplate([FromBody] string jsonTemplate)
+        {/*
+          we need to check if template exists */
             UserInfo userInfo = new UserInfo();
             try
             {
@@ -152,24 +192,22 @@ namespace Cascade0.Controllers
             {
                 Conflict("Issue gathering userid");
             }
-
-
+            HttpClient client = new HttpClient();
+            var response = await client.GetAsync($"/data/2.5/weather?q=London,UK&appid=c44d8aa0c5e588db11ac6191c0bc6a60&units=metric");
+            var stringResult = await response.Content.ReadAsStringAsync();
             SearchTemplate newSearchTemplate = new SearchTemplate();
             newSearchTemplate.UserId = userInfo.UserId;
-            string sampleData = @"{
-                                    ""propName"": Lastname,
-                                    ""selectedOperator"": Equals,
-                                    ""paramaterValue"": Jones
-                                }";
+            newSearchTemplate.Type = 1;
+            string sampleData = stringResult;
             newSearchTemplate.Query = sampleData;
             _context.SearchTemplate.Add(newSearchTemplate);
             try
             {
                 await _context.SaveChangesAsync();
             }
-            catch
+            catch(DbUpdateException ex)
             {
-                Conflict("Issue saving new template");
+                Conflict("Issue saving new template"+ ex);
             }
             return Ok(); 
         }
