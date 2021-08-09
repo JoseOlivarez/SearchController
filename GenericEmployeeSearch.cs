@@ -139,7 +139,7 @@ namespace Cascade0.Controllers
 
 
             JObject jobject = JObject.Parse(loadTemplateForUser);
-            // pick out one album
+            // pick out one template from the user "default template"
 
             // Copy to a static Template instance
             GenericObject template = jobject.ToObject<GenericObject>();
