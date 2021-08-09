@@ -199,7 +199,7 @@ namespace Cascade0.Controllers
             newSearchTemplate.UserId = userInfo.UserId;
             newSearchTemplate.Type = 1;
             string sampleData = stringResult;
-            newSearchTemplate.Query = sampleData;
+            newSearchTemplate.Query = stringResult;
             _context.SearchTemplate.Add(newSearchTemplate);
             try
             {
