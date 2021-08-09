@@ -44,8 +44,8 @@ namespace Cascade0.Controllers.DataTransferObjects
 
         [JsonProperty("Vacationdays")]
         public decimal Vacationdays { get; set; }
-        [JsonProperty("Status1")]
-        public int? Status1 { get; set; }
+        [JsonProperty("Status")]
+        public int? Status { get; set; }
         [JsonProperty("Entered")]
         public DateTime? Entered { get; set; }
         [JsonProperty("Enterby")]
@@ -163,7 +163,7 @@ namespace Cascade0.Controllers.DataTransferObjects
 
         public string TerminationComment { get; set; }
 
-        public int Status { get; set; }
+
         //Employees history         
         public string TransactionType { get; set; }
 
@@ -191,13 +191,18 @@ namespace Cascade0.Controllers.DataTransferObjects
         public bool Or2 { get; set; }
 
         public dynamic parameterValueUndeclared { get;  set; }
-        public bool Or3 { get; internal set; }
+        public bool Or3 { get;  set; }
         public string paramaterverValue1 { get;  set; }
         public string paramaterValue1 { get;  set; }
         public string paramaterValue2 { get;  set; }
         public string paramaterValue3 { get; set; }
         public string paramaterValue4 { get; set; }
-
+        public int? VehicleGrossWeight { get;  set; }
+        public string VehicleDescription { get;  set; }
+        public int DriverId { get;  set; }
+        public string Inprf { get;  set; }
+        public bool IsDriver { get; set; }
+        public int? VtypeId { get; internal set; }
     }
 
 }   
